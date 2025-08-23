@@ -67,8 +67,7 @@ pub fn fadvise(
     _offset: Option<u64>,
     _len: Option<usize>,
 ) -> io::Result<()> {
-    Err(io::Error::new(
-        io::ErrorKind::Other,
+    Err(io::Error::other(
         "fadvise is not supported on this platform",
     ))
 }
@@ -87,8 +86,7 @@ pub fn fallocate(file: &fs::File, len: usize) -> io::Result<()> {
 
 #[cfg(not(target_os = "linux"))]
 pub fn fallocate(_file: &fs::File, _len: usize) -> io::Result<()> {
-    Err(io::Error::new(
-        io::ErrorKind::Other,
+    Err(io::Error::other(
         "fallocate is not supported on this platform",
     ))
 }
@@ -110,9 +108,9 @@ pub fn fincore(file: &fs::File) -> io::Result<FincoreStats> {
     let metadata = file.metadata()?;
     let file_bytes = metadata.len();
     let page_size = crate::page_size() as u64;
-    let total_pages = (file_bytes + page_size - 1) / page_size;
+    let total_pages = file_bytes.div_ceil(page_size);
 
-    let mem = mmap::Mmap::map(&file, 0, file_bytes as usize)?;
+    let mem = mmap::Mmap::map(file, 0, file_bytes as usize)?;
     let mut pages: Vec<u8> = vec![0; total_pages as usize];
     let ret = unsafe { libc::mincore(mem.as_ptr() as _, file_bytes as _, pages.as_mut_ptr() as _) };
     if ret != 0 {
@@ -133,8 +131,7 @@ pub fn fincore(file: &fs::File) -> io::Result<FincoreStats> {
 
 #[cfg(not(target_os = "linux"))]
 pub fn fincore(_file: &fs::File) -> io::Result<FincoreStats> {
-    Err(io::Error::new(
-        io::ErrorKind::Other,
+    Err(io::Error::other(
         "fincore is not supported on this platform",
     ))
 }

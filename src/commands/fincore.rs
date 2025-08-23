@@ -126,31 +126,29 @@ impl Fincore {
 
         let mut printed = false;
         for (i, page) in stats.pages.iter().enumerate() {
-            if self.pages {
-                if (*page & 1) == 1 {
-                    print!("{} ", i);
-                    printed = true;
-                }
+            if self.pages && (*page & 1) == 1 {
+                print!("{} ", i);
+                printed = true;
             }
         }
         if printed {
             println!();
         }
 
-        if let Some(min_size) = self.min_size {
-            if stats.file_bytes <= min_size {
-                return 0;
-            }
+        if let Some(min_size) = self.min_size
+            && stats.file_bytes <= min_size
+        {
+            return 0;
         }
-        if let Some(min_cached_size) = self.min_cached_size {
-            if stats.cached_bytes <= min_cached_size {
-                return 0;
-            }
+        if let Some(min_cached_size) = self.min_cached_size
+            && stats.cached_bytes <= min_cached_size
+        {
+            return 0;
         }
-        if let Some(min_perc_cached) = self.min_perc_cached {
-            if cached_perc < min_perc_cached {
-                return 0;
-            }
+        if let Some(min_perc_cached) = self.min_perc_cached
+            && cached_perc < min_perc_cached
+        {
+            return 0;
         }
         if self.only_cached && stats.cached_bytes == 0 {
             return 0;
