@@ -1,7 +1,9 @@
-use crate::filesystem;
-use clap::Parser;
 use std::fs::File;
 use std::path::PathBuf;
+
+use clap::Parser;
+
+use crate::filesystem;
 
 #[derive(Parser, Debug)]
 pub struct Fallocate {

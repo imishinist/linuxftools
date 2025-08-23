@@ -3,7 +3,6 @@ use clap::Parser;
 use linuxftools::{commands, signal};
 
 fn main() {
-    env_logger::init();
     signal::setup_signal_handler();
 
     let cmd = commands::Fincore::parse();
