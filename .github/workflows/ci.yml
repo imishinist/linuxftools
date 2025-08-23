@@ -115,7 +115,7 @@ jobs:
       with:
         draft: true
         files: "linuxftools-*"
-        body_path: Changes.md
+        body_path: CHANGES.md
       if: startsWith( github.ref, 'refs/tags/v' )
 
   e2e-test:
