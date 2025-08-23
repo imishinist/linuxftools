@@ -1,7 +1,7 @@
 pub mod fadvise;
-pub mod fincore;
 pub mod fallocate;
+pub mod fincore;
 
 pub use fadvise::*;
-pub use fincore::*;
 pub use fallocate::*;
+pub use fincore::*;

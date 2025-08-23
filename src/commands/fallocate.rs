@@ -1,8 +1,7 @@
 use clap::Parser;
 
 #[derive(Parser, Debug)]
-pub struct Fallocate {
-}
+pub struct Fallocate {}
 
 impl Fallocate {
     pub fn run(&self) -> Result<(), Box<dyn std::error::Error>> {

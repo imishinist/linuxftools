@@ -1,6 +1,6 @@
 use clap::Parser;
 
-use linuxftools::{signal, commands};
+use linuxftools::{commands, signal};
 
 fn main() {
     env_logger::init();
