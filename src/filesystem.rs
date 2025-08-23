@@ -71,3 +71,23 @@ pub fn fadvise(
         "fadvise is not supported on this platform",
     ))
 }
+
+#[cfg(target_os = "linux")]
+pub fn fallocate(file: &fs::File, len: usize) -> io::Result<()> {
+    use std::os::fd::AsRawFd;
+
+    // TODO: support more modes
+    let mode = libc::FALLOC_FL_KEEP_SIZE;
+    match unsafe { libc::fallocate(file.as_raw_fd(), mode, 0, len as _) } {
+        0 => Ok(()),
+        err => Err(io::Error::from_raw_os_error(err)),
+    }
+}
+
+#[cfg(not(target_os = "linux"))]
+pub fn fallocate(_file: &fs::File, _len: usize) -> io::Result<()> {
+    Err(io::Error::new(
+        io::ErrorKind::Other,
+        "fallocate is not supported on this platform",
+    ))
+}
