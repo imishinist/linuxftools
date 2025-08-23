@@ -8,6 +8,9 @@ on:
       - "linuxftools-*"
   pull_request:
 
+permissions:
+  contents: write
+
 env:
   CARGO_TERM_COLOR: always
   GITHUB_TOKEN: ${{ github.token }}
