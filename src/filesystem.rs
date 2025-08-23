@@ -91,3 +91,49 @@ pub fn fallocate(_file: &fs::File, _len: usize) -> io::Result<()> {
         "fallocate is not supported on this platform",
     ))
 }
+
+pub struct FincoreStats {
+    pub file_bytes: u64,
+    pub cached_bytes: u64,
+
+    pub total_pages: u64,
+    pub cached_pages: u64,
+
+    pub pages: Vec<u8>,
+}
+
+#[cfg(target_os = "linux")]
+pub fn fincore(file: &fs::File) -> io::Result<FincoreStats> {
+    use crate::mmap;
+
+    let metadata = file.metadata()?;
+    let file_bytes = metadata.len();
+    let page_size = crate::page_size() as u64;
+    let total_pages = (file_bytes + page_size - 1) / page_size;
+
+    let mem = mmap::Mmap::map(&file, 0, file_bytes as usize)?;
+    let mut pages: Vec<u8> = vec![0; total_pages as usize];
+    let ret = unsafe { libc::mincore(mem.as_ptr() as _, file_bytes as _, pages.as_mut_ptr() as _) };
+    if ret != 0 {
+        return Err(io::Error::last_os_error());
+    }
+
+    let cached_pages = pages.iter().filter(|&&b| (b & 1) == 1).count() as u64;
+    let cached_bytes = cached_pages * page_size;
+
+    Ok(FincoreStats {
+        file_bytes,
+        cached_bytes,
+        total_pages,
+        cached_pages,
+        pages,
+    })
+}
+
+#[cfg(not(target_os = "linux"))]
+pub fn fincore(_file: &fs::File) -> io::Result<FincoreStats> {
+    Err(io::Error::new(
+        io::ErrorKind::Other,
+        "fincore is not supported on this platform",
+    ))
+}
