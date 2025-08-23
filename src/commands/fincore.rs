@@ -179,20 +179,10 @@ impl Fincore {
 fn show_headers() {
     println!(
         "{:<80} {:>18} {:>18} {:>18} {:>18} {:>18}",
-        "filename",
-        "size",
-        "total_pages",
-        "cached_pages",
-        "cached_size",
-        "cached_perc"
+        "filename", "size", "total_pages", "cached_pages", "cached_size", "cached_perc"
     );
     println!(
         "{:<80} {:>18} {:>18} {:>18} {:>18} {:>18}",
-        "--------",
-        "----",
-        "-----------",
-        "------------",
-        "-----------",
-        "-----------"
+        "--------", "----", "-----------", "------------", "-----------", "-----------"
     );
 }
