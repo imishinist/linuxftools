@@ -6,3 +6,8 @@ edition = "2024"
 [dependencies]
 clap = { version = "4.5.45", features = ["derive"] }
 libc = "1.0.0-alpha.1"
+
+[dev-dependencies.cargo-husky]
+version = "1"
+default-features = false
+features = ["precommit-hook", "run-cargo-test", "run-cargo-fmt", "run-cargo-check", "run-cargo-clippy"]
