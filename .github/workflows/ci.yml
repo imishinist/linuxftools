@@ -1,0 +1,174 @@
+name: Rust
+
+on:
+  push:
+    branches:
+      - "**"
+    tags-ignore:
+      - "linuxftools-*"
+  pull_request:
+
+env:
+  CARGO_TERM_COLOR: always
+  GITHUB_TOKEN: ${{ github.token }}
+  RUST_BACKTRACE: 1
+  TERM: xterm
+
+jobs:
+  test:
+    name: ${{ matrix.platform.os_name }} with rust stable
+    runs-on: ${{ matrix.platform.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        platform:
+          - os: ubuntu-latest
+            os_name: Linux-x86_64
+            target: x86_64-unknown-linux-musl
+            skip_tests: false
+            name: linuxftools-Linux-x86_64-musl.tar.gz
+          - os: ubuntu-latest
+            os_name: Linux-aarch64
+            target: aarch64-unknown-linux-musl
+            skip_tests: false
+            name: linuxftools-Linux-aarch64-musl.tar.gz
+
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Extract crate information
+      shell: bash
+      run: |
+        echo "PROJECT_NAME=$(sed -n 's/^name = "\(.*\)"/\1/p' Cargo.toml | head -n1)" >> $GITHUB_ENV
+        echo "PROJECT_VERSION=$(sed -n 's/^version = "\(.*\)"/\1/p' Cargo.toml | head -n1)" >> $GITHUB_ENV
+    
+    - name: Install musl-tools on Linux
+      run: sudo apt-get update --yes && sudo apt-get install --yes musl-tools
+      if: contains(matrix.platform.target, 'musl')
+    
+    - name: Build binaries
+      uses: houseabsolute/actions-rust-cross@v0
+      with:
+        command: "build"
+        target: ${{ matrix.platform.target }}
+        toolchain: stable
+        args: "--locked --release --bins"
+        strip: true
+    
+    - name: Run tests
+      uses: houseabsolute/actions-rust-cross@v0
+      with:
+        command: "test"
+        target: ${{ matrix.platform.target }}
+        toolchain: stable
+        args: "--locked --release"
+      if: ${{ !matrix.platform.skip_tests }}
+    
+    - name: List built binaries
+      shell: bash
+      run: |
+        echo "Built binaries:"
+        ls -la target/${{ matrix.platform.target }}/release/
+        echo "Binaries to package:"
+        ls -la target/${{ matrix.platform.target }}/release/{fallocate,fincore,fadvise} || true
+    
+    - name: Package as archive
+      shell: bash
+      run: |
+        cd target/${{ matrix.platform.target }}/release
+        
+        # Create a directory for packaging
+        mkdir -p linuxftools-${{ env.PROJECT_VERSION }}
+        
+        # Copy all binaries
+        for binary in fallocate fincore fadvise; do
+          if [[ -f "$binary" ]]; then
+            cp "$binary" linuxftools-${{ env.PROJECT_VERSION }}/
+            echo "Packaged: $binary"
+          else
+            echo "Warning: $binary not found"
+          fi
+        done
+        
+        # Create archive
+        tar czvf ../../../${{ matrix.platform.name }} linuxftools-${{ env.PROJECT_VERSION }}/*
+        
+        cd -
+      if: |
+        startsWith( github.ref, 'refs/tags/v' ) || github.ref == 'refs/tags/test-release'
+    
+    - name: Publish release artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: linuxftools-${{ matrix.platform.os_name }}
+        path: "linuxftools-*"
+      if: github.ref == 'refs/tags/test-release'
+    
+    - name: Generate SHA-256
+      run: shasum -a 256 ${{ matrix.platform.name }}
+      if: |
+        startsWith( github.ref, 'refs/tags/v' ) ||
+        github.ref == 'refs/tags/test-release'
+    
+    - name: Publish GitHub release
+      uses: softprops/action-gh-release@v1
+      with:
+        draft: true
+        files: "linuxftools-*"
+        body_path: Changes.md
+      if: startsWith( github.ref, 'refs/tags/v' )
+
+  e2e-test:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Build all binaries
+      run: cargo build --locked --bins
+    
+    - name: Verify binaries are built
+      run: |
+        echo "Checking built binaries:"
+        ls -la target/debug/
+        for binary in fallocate fincore fadvise; do
+          if [[ -f "target/debug/$binary" ]]; then
+            echo "✓ $binary built successfully"
+            ./target/debug/$binary --help || echo "Help command failed for $binary"
+          else
+            echo "✗ $binary not found"
+            exit 1
+          fi
+        done
+    
+    - name: Run integration tests
+      run: |
+        if [[ -d "tests" ]]; then
+          while read -r line; do
+            echo "Running test: $line"
+            bash "$line"
+          done < <(find tests -name "*.sh" -type f -perm -u+x)
+        else
+          echo "No tests directory found, skipping integration tests"
+        fi
+
+  lint:
+    name: Lint and format check
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Install Rust
+      uses: dtolnay/rust-toolchain@stable
+      with:
+        components: rustfmt, clippy
+    
+    - name: Check formatting
+      run: cargo fmt --all -- --check
+    
+    - name: Run clippy
+      run: cargo clippy --all-targets --all-features -- -D warnings
+    
+    - name: Check documentation
+      run: cargo doc --no-deps --document-private-items --all-features
+      env:
+        RUSTDOCFLAGS: "-D warnings"
