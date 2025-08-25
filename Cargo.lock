@@ -130,7 +130,7 @@ checksum = "7222002e5385b4d9327755661e3847c970e8fbf9dea6da8c57f16e8cfbff53a8"
 
 [[package]]
 name = "linuxftools"
-version = "0.1.1"
+version = "0.2.0"
 dependencies = [
  "cargo-husky",
  "clap",
