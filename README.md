@@ -55,6 +55,30 @@ cargo build --release
 
 ## Installation
 
+### From GitHub Releases
+
+Download the latest pre-built binary from the [Releases page](https://github.com/imishinist/linuxftools/releases):
+
+```bash
+# Download the latest release
+curl -L -o linuxftools-Linux-x86_64-musl.tar.gz https://github.com/imishinist/linuxftools/releases/latest/download/linuxftools-Linux-x86_64-musl.tar.gz
+
+# Extract the archive
+tar -xzf linuxftools-Linux-x86_64-musl.tar.gz
+
+# Move binaries to your PATH (e.g., /usr/local/bin)
+sudo cp linuxftools-*/* /usr/local/bin/
+
+# Or install to ~/.local/bin (make sure it's in your PATH)
+mkdir -p ~/.local/bin
+cp linuxftools-*/* ~/.local/bin/
+
+# Clean up
+rm -rf linuxftools-* linuxftools-Linux-x86_64-musl.tar.gz
+```
+
+### From Source
+
 ```bash
 cargo install --path .
 ```
