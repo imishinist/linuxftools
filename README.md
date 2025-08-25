@@ -26,9 +26,15 @@ fincore [OPTIONS] <files>...
 ```
 
 Options:
-- `-s, --summarize`: Print a summary report when comparing multiple files
+- `-s, --summarize`: When comparing multiple files, print a summary report
 - `-p, --pages`: Print pages that are cached
 - `-o, --only-cached`: Only print stats for files that are actually in cache
+- `-g, --graph`: Print a visual graph of each file's cached page distribution
+- `-S, --min-size <N>`: Require that each files size be larger than N bytes
+- `-C, --min-cached-size <N>`: Require that each files cached size be larger than N bytes
+- `-P, --min-perc-cached <N>`: Require percentage of a file that must be cached
+- `-L, --vertical`: Print the output of this script vertically
+- `-v, --verbose`: Enable verbose output
 
 ### fadvise
 Provides file access pattern advice to the kernel.
