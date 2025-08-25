@@ -6,6 +6,7 @@ edition = "2024"
 [dependencies]
 clap = { version = "4.5.45", features = ["derive"] }
 libc = "1.0.0-alpha.1"
+termsize = "0.1.9"
 
 [dev-dependencies.cargo-husky]
 version = "1"

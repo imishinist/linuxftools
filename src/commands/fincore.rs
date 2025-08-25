@@ -5,6 +5,8 @@ use clap::Parser;
 
 use crate::filesystem;
 
+const DEFAULT_NR_REGIONS: usize = 160;
+
 #[derive(Parser, Debug)]
 pub struct Fincore {
     #[clap(
@@ -24,12 +26,13 @@ pub struct Fincore {
     )]
     only_cached: bool,
 
-    // #[clap(
-    //     short = 'g',
-    //     long,
-    //     help = "Print a visual graph of each file's cached page distribution."
-    // )]
-    // graph: bool,
+    #[clap(
+        short = 'g',
+        long,
+        help = "Print a visual graph of each file's cached page distribution."
+    )]
+    graph: bool,
+
     #[clap(
         short = 'S',
         long,
@@ -71,14 +74,17 @@ impl Fincore {
             println!("    pages: {}", self.pages);
             println!("    summarize: {}", self.summarize);
             println!("    only cached: {}", self.only_cached);
-            // println!("    graph: {}", self.graph);
+            println!("    graph: {}", self.graph);
             println!("    min size: {:?}", self.min_size);
             println!("    min cached size: {:?}", self.min_cached_size);
             println!("    min perc cached: {:?}", self.min_perc_cached);
             println!("    vertical: {}", self.vertical);
         }
 
-        show_headers();
+        if !self.graph {
+            show_headers();
+        }
+
         let mut total_cached_bytes = 0u64;
         for file in &self.files {
             let cached_bytes = self.fincore(file);
@@ -93,10 +99,15 @@ impl Fincore {
     }
 
     fn fincore<P: AsRef<Path>>(&self, path: P) -> u64 {
+        let nr_regions = match termsize::get() {
+            Some(size) => ((size.cols / 2) * 2 - 10) as usize,
+            None => DEFAULT_NR_REGIONS,
+        };
+
         let file = match File::options().read(true).open(&path) {
             Ok(f) => f,
             Err(e) => {
-                eprint!("Could not open file {}", path.as_ref().display());
+                eprint!("Could not open file: {}", path.as_ref().display());
                 eprintln!(": {}", e);
                 return 0;
             }
@@ -122,13 +133,25 @@ impl Fincore {
                 return 0;
             }
         };
+
+        let region_ptr = (stats.total_pages - 1) / nr_regions as u64;
         let cached_perc = stats.cached_pages as f64 / stats.total_pages as f64 * 100.0;
 
         let mut printed = false;
+        let mut regions = vec![0; nr_regions];
+        assert_eq!(stats.total_pages as usize, stats.pages.len());
+
         for (i, page) in stats.pages.iter().enumerate() {
-            if self.pages && (*page & 1) == 1 {
-                print!("{} ", i);
-                printed = true;
+            if (*page & 1) == 1 {
+                if self.pages {
+                    print!("{} ", i);
+                    printed = true;
+                }
+
+                if region_ptr > 0 {
+                    let region = i / region_ptr as usize;
+                    regions[region.min(nr_regions - 1)] += 1;
+                }
             }
         }
         if printed {
@@ -154,6 +177,10 @@ impl Fincore {
             return 0;
         }
 
+        if self.graph {
+            show_headers();
+        }
+
         if self.vertical {
             println!("{}", path.as_ref().display());
             println!("size: {}", stats.file_bytes);
@@ -172,7 +199,48 @@ impl Fincore {
                 cached_perc
             );
         }
+
+        if self.graph && stats.total_pages > nr_regions as u64 {
+            let region_percs: Vec<_> = regions
+                .into_iter()
+                .map(|r| match r {
+                    0 => 0f64,
+                    _ => r as f64 / region_ptr as f64 * 100.0f64,
+                })
+                .collect();
+            self.graph(&region_percs);
+        }
+
         stats.cached_bytes
+    }
+
+    fn graph_header(&self, nr_regions: usize) {
+        println!(" ------{}", "-".repeat(nr_regions));
+    }
+
+    fn graph(&self, regions: &[f64]) {
+        println!();
+        self.graph_header(regions.len());
+
+        let perc_width = 10;
+        for i in 0..perc_width {
+            let perc_index = (100 - (i + 1) * perc_width) as f64;
+            print!("{:>4} % ", perc_index + perc_width as f64);
+
+            for region in regions {
+                if *region < 1.0f64 {
+                    print!(" ");
+                } else if *region >= perc_index {
+                    print!("*");
+                } else {
+                    print!(" ");
+                }
+            }
+            println!(" | ");
+        }
+
+        self.graph_header(regions.len());
+        println!();
     }
 }
 
